@@ -6,7 +6,7 @@ import streamlit as st
 
 from services.analytics_service import calculate_metrics, compare_latest_months
 from services.anomaly_service import detect_anomalies
-from utils.formatting import format_percent, format_rubles
+from utils.formatting import format_month, format_percent, format_rubles
 from utils.style import ALFA_RED, INK, frame_period, render_page_heading, style_plotly_figure
 
 
@@ -33,6 +33,8 @@ def render_page(frame: pd.DataFrame) -> None:
 
     monthly = frame.copy()
     monthly["Месяц"] = pd.to_datetime(monthly["date"]).dt.to_period("M").dt.to_timestamp()
+    month_order = monthly["Месяц"].drop_duplicates().sort_values().map(format_month).tolist()
+    monthly["Месяц"] = monthly["Месяц"].map(format_month)
     monthly["Поток"] = monthly["operation_type"].map(
         {"income": "Выручка", "expense": "Расходы", "commission": "Расходы", "refund": "Возвраты"}
     )
@@ -45,6 +47,7 @@ def render_page(frame: pd.DataFrame) -> None:
         markers=True,
         labels={"amount": "Сумма, ₽"},
         color_discrete_map={"Выручка": ALFA_RED, "Расходы": INK, "Возвраты": "#9A9A9A"},
+        category_orders={"Месяц": month_order},
     )
     figure.update_traces(
         line={"width": 3},

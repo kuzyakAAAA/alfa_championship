@@ -5,8 +5,9 @@ import plotly.express as px
 import streamlit as st
 
 from services.analytics_service import calculate_metrics, group_expenses_by_category, revenue_by_month
-from utils.formatting import format_rubles
+from utils.formatting import format_month, format_rubles
 from utils.style import ALFA_RED, frame_period, render_page_heading, style_plotly_figure
+from utils.validators import parse_russian_date_range
 
 
 def render_page(frame: pd.DataFrame) -> None:
@@ -15,18 +16,26 @@ def render_page(frame: pd.DataFrame) -> None:
     render_page_heading("Аналитика", len(frame), frame_period(frame))
     data = frame.copy()
     data["date"] = pd.to_datetime(data["date"])
-    first, second = st.columns(2)
-    date_range = first.date_input(
+    default_start = data["date"].min().date()
+    default_end = data["date"].max().date()
+    period_text = st.text_input(
         "Период",
-        (data["date"].min().date(), data["date"].max().date()),
-        format="DD.MM.YYYY",
+        value=f"{default_start:%d.%m.%Y} — {default_end:%d.%m.%Y}",
+        placeholder="01.01.2001 — 31.12.2001",
     )
-    categories = second.multiselect("Категории", sorted(data["category"].unique()))
-    operation_types = st.multiselect(
-        "Типы операций", sorted(data["operation_type"].unique()), default=sorted(data["operation_type"].unique())
+    try:
+        start_date, end_date = parse_russian_date_range(period_text)
+    except ValueError as error:
+        st.error(str(error))
+        start_date, end_date = default_start, default_end
+    data = data[data["date"].dt.date.between(start_date, end_date)]
+    first, second = st.columns(2)
+    categories = first.multiselect("Категории", sorted(data["category"].unique()))
+    operation_types = second.multiselect(
+        "Типы операций",
+        sorted(data["operation_type"].unique()),
+        default=sorted(data["operation_type"].unique()),
     )
-    if isinstance(date_range, tuple) and len(date_range) == 2:
-        data = data[data["date"].dt.date.between(date_range[0], date_range[1])]
     if categories:
         data = data[data["category"].isin(categories)]
     data = data[data["operation_type"].isin(operation_types)]
@@ -38,11 +47,12 @@ def render_page(frame: pd.DataFrame) -> None:
     stats[3].metric("Комиссии", format_rubles(metrics.bank_fees))
     left, right = st.columns(2)
     revenue = revenue_by_month(data)
+    revenue["month_label"] = revenue["month"].map(format_month)
     revenue_figure = px.bar(
         revenue,
-        x="month",
+        x="month_label",
         y="revenue",
-        labels={"month": "Месяц", "revenue": "Выручка, ₽"},
+        labels={"month_label": "Месяц", "revenue": "Выручка, ₽"},
         color_discrete_sequence=[ALFA_RED],
     )
     revenue_figure.update_traces(marker_line_width=0, hovertemplate="%{y:,.0f} ₽<extra></extra>")

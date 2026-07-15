@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from services.forecast_service import build_revenue_forecast, prepare_time_series
-from utils.formatting import format_rubles
+from utils.formatting import format_month, format_rubles
 from utils.style import ALFA_RED, INK, frame_period, render_page_heading, style_plotly_figure
 
 
@@ -20,7 +20,7 @@ def render_page(frame: pd.DataFrame) -> None:
     history = prepare_time_series(frame)
     figure = go.Figure()
     figure.add_scatter(
-        x=history.index,
+        x=[format_month(value) for value in history.index],
         y=history.values,
         name="История",
         mode="lines+markers",
@@ -34,7 +34,7 @@ def render_page(frame: pd.DataFrame) -> None:
     }
     for scenario in result.scenarios:
         figure.add_scatter(
-            x=[point.date for point in scenario.points],
+            x=[format_month(point.date) for point in scenario.points],
             y=[point.value for point in scenario.points],
             name=scenario.name,
             mode="lines+markers",

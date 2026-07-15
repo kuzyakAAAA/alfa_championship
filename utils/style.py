@@ -358,8 +358,7 @@ def style_plotly_figure(figure: go.Figure) -> go.Figure:
         zeroline=False,
         linecolor=GRID,
         tickfont={"color": MUTED},
-        tickformat="%d.%m.%Y",
-        tickangle=-45,
+        tickangle=-30,
         automargin=True,
     )
     figure.update_yaxes(

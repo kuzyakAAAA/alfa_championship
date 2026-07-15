@@ -7,6 +7,22 @@ from typing import Any
 import pandas as pd
 
 
+RUSSIAN_MONTHS = (
+    "Январь",
+    "Февраль",
+    "Март",
+    "Апрель",
+    "Май",
+    "Июнь",
+    "Июль",
+    "Август",
+    "Сентябрь",
+    "Октябрь",
+    "Ноябрь",
+    "Декабрь",
+)
+
+
 def format_rubles(value: Any) -> str:
     """Format a value in rubles with grouped thousands and safe precision."""
 
@@ -30,6 +46,12 @@ def format_date(value: date | datetime | pd.Timestamp | None) -> str:
     """Format a date or return a safe placeholder."""
 
     return "—" if value is None or pd.isna(value) else pd.Timestamp(value).strftime("%d.%m.%Y")
+
+
+def format_month(value: date | datetime | pd.Timestamp) -> str:
+    """Format a date as a Russian month name for chart axes."""
+
+    return RUSSIAN_MONTHS[pd.Timestamp(value).month - 1]
 
 
 def format_large_number(value: Any) -> str:

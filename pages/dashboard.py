@@ -32,13 +32,14 @@ def render_page(frame: pd.DataFrame) -> None:
         )
 
     monthly = frame.copy()
-    monthly["Месяц"] = pd.to_datetime(monthly["date"]).dt.to_period("M").dt.to_timestamp()
-    month_order = monthly["Месяц"].drop_duplicates().sort_values().map(format_month).tolist()
-    monthly["Месяц"] = monthly["Месяц"].map(format_month)
+    monthly["month"] = pd.to_datetime(monthly["date"]).dt.to_period("M").dt.to_timestamp()
+    month_order = monthly["month"].drop_duplicates().sort_values().map(format_month).tolist()
     monthly["Поток"] = monthly["operation_type"].map(
         {"income": "Выручка", "expense": "Расходы", "commission": "Расходы", "refund": "Возвраты"}
     )
-    chart = monthly.groupby(["Месяц", "Поток"], as_index=False)["amount"].sum()
+    chart = monthly.groupby(["month", "Поток"], as_index=False)["amount"].sum()
+    chart = chart.sort_values("month")
+    chart["Месяц"] = chart["month"].map(format_month)
     figure = px.line(
         chart,
         x="Месяц",

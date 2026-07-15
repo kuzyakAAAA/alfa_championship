@@ -67,7 +67,7 @@ def main() -> None:
         "Аналитика": lambda: analytics.render_page(frame),
         "Прогноз": lambda: forecast.render_page(frame),
         "Тарифы": lambda: tariffs.render_page(frame, load_tariffs()),
-        "ИИ-помощник": lambda: assistant.render_page(frame),
+        "ИИ-помощник": lambda: assistant.render_page(frame, load_tariffs()),
     }
     renderers[page]()
 

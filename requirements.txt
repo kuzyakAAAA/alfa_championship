@@ -5,4 +5,5 @@ plotly>=5.22,<7.0
 SQLAlchemy>=2.0,<3.0
 scikit-learn>=1.5,<2.0
 python-dotenv>=1.0,<2.0
+gigachat
 pytest>=8.2,<9.0

@@ -6,23 +6,44 @@ import streamlit as st
 
 from services.forecast_service import build_revenue_forecast, prepare_time_series
 from utils.formatting import format_rubles
+from utils.style import ALFA_RED, INK, frame_period, render_page_heading, style_plotly_figure
 
 
 def render_page(frame: pd.DataFrame) -> None:
     """Render historical revenue and three forecast scenarios."""
 
-    st.title("Прогноз")
+    render_page_heading("Прогноз", len(frame), frame_period(frame))
     result = build_revenue_forecast(frame)
     if not result.sufficient_history:
         st.warning(result.message)
         return
     history = prepare_time_series(frame)
     figure = go.Figure()
-    figure.add_scatter(x=history.index, y=history.values, name="История", mode="lines+markers")
+    figure.add_scatter(
+        x=history.index,
+        y=history.values,
+        name="История",
+        mode="lines+markers",
+        line={"color": INK, "width": 3},
+        marker={"size": 7},
+    )
+    scenario_styles = {
+        "Пессимистичный": {"color": "#9A9A9A", "dash": "dot"},
+        "Базовый": {"color": ALFA_RED, "dash": "solid"},
+        "Оптимистичный": {"color": "#D91F14", "dash": "dash"},
+    }
     for scenario in result.scenarios:
-        figure.add_scatter(x=[point.date for point in scenario.points], y=[point.value for point in scenario.points], name=scenario.name, mode="lines+markers")
-    figure.update_layout(xaxis_title="Месяц", yaxis_title="Выручка, ₽", legend_title="Сценарий")
-    st.plotly_chart(figure, width="stretch")
+        figure.add_scatter(
+            x=[point.date for point in scenario.points],
+            y=[point.value for point in scenario.points],
+            name=scenario.name,
+            mode="lines+markers",
+            line={**scenario_styles[scenario.name], "width": 2.5},
+            marker={"size": 7},
+        )
+    figure.update_layout(xaxis_title="Месяц", yaxis_title="Выручка, ₽")
+    figure.update_traces(hovertemplate="%{y:,.0f} ₽<extra>%{fullData.name}</extra>")
+    st.plotly_chart(style_plotly_figure(figure), width="stretch", theme=None)
     base = next(item for item in result.scenarios if item.name == "Базовый")
     st.metric("Базовый прогноз на квартал", format_rubles(sum(point.value for point in base.points)))
     st.info(result.message)

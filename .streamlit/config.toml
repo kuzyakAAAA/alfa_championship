@@ -1,0 +1,38 @@
+[client]
+showSidebarNavigation = false
+toolbarMode = "minimal"
+
+[theme]
+base = "light"
+primaryColor = "#EF3124"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F5F5"
+textColor = "#111111"
+redColor = "#EF3124"
+redBackgroundColor = "#FDEBEA"
+redTextColor = "#861B14"
+orangeColor = "#B85C00"
+orangeBackgroundColor = "#FFF1E4"
+orangeTextColor = "#713800"
+yellowColor = "#A56A00"
+yellowBackgroundColor = "#FFF6D8"
+yellowTextColor = "#5C4300"
+greenColor = "#197A4A"
+greenBackgroundColor = "#E8F6EE"
+greenTextColor = "#125C38"
+grayColor = "#6B6B6B"
+grayBackgroundColor = "#F3F3F3"
+grayTextColor = "#4A4A4A"
+borderColor = "#E5E5E5"
+dataframeBorderColor = "#E5E5E5"
+dataframeHeaderBackgroundColor = "#F5F5F5"
+baseRadius = "small"
+buttonRadius = "small"
+showWidgetBorder = true
+
+[theme.sidebar]
+backgroundColor = "#FAFAFA"
+secondaryBackgroundColor = "#F1F1F1"
+textColor = "#111111"
+primaryColor = "#EF3124"
+borderColor = "#E5E5E5"

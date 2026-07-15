@@ -7,6 +7,7 @@ from config import LLM_API_KEY
 from services.ai_service import answer_question, prepare_ai_context
 from services.analytics_service import calculate_metrics
 from services.anomaly_service import detect_anomalies
+from utils.style import frame_period, render_page_heading
 
 
 EXAMPLES = [
@@ -19,7 +20,7 @@ EXAMPLES = [
 def render_page(frame: pd.DataFrame) -> None:
     """Render a session-based context-bound chat."""
 
-    st.title("ИИ-помощник")
+    render_page_heading("ИИ-помощник", len(frame), frame_period(frame))
     if not LLM_API_KEY:
         st.info("API-ключ не задан: помощник работает в безопасном mock-режиме.")
     st.caption("Примеры: " + " · ".join(EXAMPLES))

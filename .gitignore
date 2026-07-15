@@ -19,4 +19,4 @@ htmlcov/
 Thumbs.db
 .DS_Store
 desktop.ini
-.streamlit/
+.streamlit/secrets.toml

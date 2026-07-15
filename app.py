@@ -7,9 +7,11 @@ from config import APP_NAME, DATA_DIR
 from pages import analytics, assistant, dashboard, forecast, tariffs
 from services.transaction_service import clean_transactions
 from utils.file_loader import load_csv_file
+from utils.style import apply_global_styles
 
 
 st.set_page_config(page_title=APP_NAME, page_icon=":material/monitoring:", layout="wide")
+apply_global_styles()
 
 
 @st.cache_data
@@ -29,9 +31,27 @@ def load_tariffs() -> pd.DataFrame:
 def main() -> None:
     """Compose navigation, data source controls and the selected page."""
 
-    st.sidebar.title(APP_NAME)
+    st.sidebar.markdown(
+        """
+        <div class="ab-brand">
+            <div class="ab-brand__mark">A</div>
+            <div class="ab-brand__name">Альфа Бизнес AI<span>Финансовая аналитика</span></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.sidebar.markdown('<div class="ab-sidebar-label">Разделы</div>', unsafe_allow_html=True)
+    page = st.sidebar.radio(
+        "Навигация",
+        ["Главная", "Аналитика", "Прогноз", "Тарифы", "ИИ-помощник"],
+        label_visibility="collapsed",
+    )
+    st.sidebar.divider()
+    st.sidebar.markdown('<div class="ab-sidebar-label">Источник данных</div>', unsafe_allow_html=True)
     demo_mode = st.sidebar.toggle("Демонстрационный режим", value=True)
-    uploaded = st.sidebar.file_uploader("Загрузить операции CSV", type=["csv"], disabled=demo_mode)
+    uploaded = None
+    if not demo_mode:
+        uploaded = st.sidebar.file_uploader("Операции CSV", type=["csv"])
     try:
         if demo_mode or uploaded is None:
             frame = load_demo_data()
@@ -42,9 +62,6 @@ def main() -> None:
     except (ValueError, OSError, pd.errors.ParserError) as error:
         st.error(f"Не удалось обработать файл: {error}")
         st.stop()
-    page = st.sidebar.radio(
-        "Навигация", ["Главная", "Аналитика", "Прогноз", "Тарифы", "ИИ-помощник"]
-    )
     renderers = {
         "Главная": lambda: dashboard.render_page(frame),
         "Аналитика": lambda: analytics.render_page(frame),

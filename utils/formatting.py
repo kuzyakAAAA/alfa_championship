@@ -1,16 +1,20 @@
 """Russian-friendly value formatting."""
 
 from datetime import date, datetime
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
 import pandas as pd
 
 
 def format_rubles(value: Any) -> str:
-    """Format a numeric value as rubles."""
+    """Format a value in rubles with grouped thousands and safe precision."""
 
     number = 0.0 if value is None or pd.isna(value) else float(value)
-    return f"{number:,.0f} ₽".replace(",", " ")
+    amount = Decimal(str(number)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    if amount == amount.to_integral():
+        return f"{amount:,.0f} ₽".replace(",", " ")
+    return f"{amount:,.2f} ₽".replace(",", " ").replace(".", ",")
 
 
 def format_percent(value: Any, signed: bool = False) -> str:
@@ -19,7 +23,7 @@ def format_percent(value: Any, signed: bool = False) -> str:
     if value is None or pd.isna(value):
         return "нет данных"
     pattern = "+.1f" if signed else ".1f"
-    return f"{float(value):{pattern}}%"
+    return f"{float(value):{pattern}}%".replace(".", ",")
 
 
 def format_date(value: date | datetime | pd.Timestamp | None) -> str:

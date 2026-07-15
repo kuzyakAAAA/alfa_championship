@@ -17,10 +17,9 @@ from config import (
 )
 from services.ai_service import answer_question, prepare_ai_context
 from services.ai_service import AIServiceError, GigaChatAIService
-from services.analytics_service import calculate_metrics, calculate_revenue
+from services.analytics_service import calculate_metrics
 from services.anomaly_service import detect_anomalies
 from services.forecast_service import build_revenue_forecast
-from services.tariff_service import build_tariff_recommendation
 from utils.style import frame_period, render_page_heading
 
 
@@ -63,9 +62,7 @@ FULL_EXAMPLES = [
 ]
 
 
-def _build_context(
-    service: GigaChatAIService, frame: pd.DataFrame, tariff_frame: pd.DataFrame
-) -> str:
+def _build_context(service: GigaChatAIService, frame: pd.DataFrame) -> str:
     """Create an anonymized aggregate context from existing calculation services."""
 
     metrics = asdict(calculate_metrics(frame))
@@ -89,27 +86,11 @@ def _build_context(
             "is_guaranteed": False,
             "message": forecast_result.message,
         }
-    tariff_context: dict[str, object] | None = None
-    if not tariff_frame.empty:
-        transfer_count = int((frame["operation_type"] != "income").sum())
-        recommendation = build_tariff_recommendation(
-            tariff_frame,
-            str(tariff_frame.iloc[0]["name"]),
-            transfer_count,
-            calculate_revenue(frame),
-            int(transfer_count * 1.15),
-        )
-        tariff_context = {
-            "current_tariff": recommendation.current_tariff,
-            "recommended_tariff": recommendation.recommended_tariff,
-            "change_recommended_now": False,
-            "expected_monthly_savings": recommendation.savings,
-            "reason": recommendation.reason,
-        }
+    tariff_context = st.session_state.get("tariff_recommendation")
     return service.build_financial_context(metrics, alerts, forecast, tariff_context)
 
 
-def render_page(frame: pd.DataFrame, tariff_frame: pd.DataFrame) -> None:
+def render_page(frame: pd.DataFrame, tariff_frame: pd.DataFrame | None = None) -> None:
     """Render a GigaChat conversation with a safe mock-mode fallback."""
 
     render_page_heading("ИИ-помощник", len(frame), frame_period(frame))
@@ -124,7 +105,8 @@ def render_page(frame: pd.DataFrame, tariff_frame: pd.DataFrame) -> None:
         verify_ssl_certs=GIGACHAT_VERIFY_SSL_CERTS,
         ca_bundle_file=GIGACHAT_CA_BUNDLE_FILE,
     )
-    st.session_state["financial_context"] = _build_context(service, frame, tariff_frame)
+    del tariff_frame
+    st.session_state["financial_context"] = _build_context(service, frame)
     if service.is_configured():
         st.success("GigaChat API подключён")
     else:

@@ -100,8 +100,9 @@ METRIC_FIELDS = {
 ALERT_FIELDS = {"severity", "title", "description"}
 FORECAST_FIELDS = {"period", "pessimistic", "base", "optimistic", "is_guaranteed", "message"}
 TARIFF_FIELDS = {
-    "current_tariff", "recommended_tariff", "change_recommended_now",
-    "expected_monthly_savings", "savings", "reason",
+    "product_type", "tariff_name", "rate_percent", "card_commission", "vat_amount",
+    "additional_fee", "total_known_cost", "effective_rate", "turnover_condition_met",
+    "automatic_change",
 }
 
 

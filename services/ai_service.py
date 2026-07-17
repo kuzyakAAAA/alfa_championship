@@ -104,6 +104,11 @@ TARIFF_FIELDS = {
     "additional_fee", "total_known_cost", "effective_rate", "turnover_condition_met",
     "automatic_change",
 }
+CASHFLOW_FIELDS = {
+    "horizon_days", "scenario", "expected_receipts", "planned_payments",
+    "ending_balance", "minimum_balance", "first_gap_date", "maximum_shortage",
+    "is_guaranteed",
+}
 
 
 class AIServiceError(RuntimeError):
@@ -147,6 +152,7 @@ class GigaChatAIService:
         alerts: Sequence[Mapping[str, Any]] | None = None,
         forecast: Mapping[str, Any] | None = None,
         tariff_recommendation: Mapping[str, Any] | None = None,
+        cashflow: Mapping[str, Any] | None = None,
     ) -> str:
         """Build bounded JSON from an explicit allow-list of aggregate fields."""
 
@@ -164,6 +170,8 @@ class GigaChatAIService:
             context["tariff_recommendation"] = self._filter_mapping(
                 tariff_recommendation, TARIFF_FIELDS
             )
+        if cashflow:
+            context["cashflow"] = self._filter_mapping(cashflow, CASHFLOW_FIELDS)
         return self._bounded_json(context)
 
     def ask(
@@ -221,6 +229,7 @@ class GigaChatAIService:
             data = json.loads(financial_context)
             metrics = data.get("metrics", {})
             alerts = data.get("alerts", [])
+            cashflow = data.get("cashflow", {})
         except (TypeError, json.JSONDecodeError):
             return "GigaChat API пока не подключён, поэтому помощник работает в демонстрационном режиме. " + DISCLAIMER
         facts: list[str] = []
@@ -236,10 +245,17 @@ class GigaChatAIService:
             title = first_alert.get("title") or first_alert.get("description")
             if title:
                 alert_text = f" Главное предупреждение: {title}."
+        cashflow_text = ""
+        if cashflow.get("first_gap_date"):
+            cashflow_text = (
+                f" Платёжный календарь показывает риск разрыва "
+                f"{cashflow['first_gap_date']} с дефицитом "
+                f"{format_rubles(cashflow.get('maximum_shortage', 0))}."
+            )
         summary = "; ".join(facts) if facts else "достаточных агрегированных показателей нет"
         return (
             "GigaChat API пока не подключён, поэтому помощник работает в демонстрационном режиме. "
-            f"По рассчитанным данным {summary}.{alert_text} "
+            f"По рассчитанным данным {summary}.{alert_text}{cashflow_text} "
             "Добавьте GIGACHAT_CREDENTIALS в локальный файл .env для полноценного диалога. "
             f"{DISCLAIMER}"
         )

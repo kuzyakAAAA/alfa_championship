@@ -93,6 +93,22 @@ def test_context_limits_alerts_to_five() -> None:
     assert context.count("Сигнал") == 5
 
 
+def test_context_allows_only_aggregated_cashflow_fields() -> None:
+    service = configured_service()
+    context = service.build_financial_context(
+        metrics={"revenue": 1},
+        cashflow={
+            "horizon_days": 30,
+            "first_gap_date": "2026-07-20",
+            "maximum_shortage": 5000,
+            "payment_title": "Секретный поставщик",
+        },
+    )
+    assert "2026-07-20" in context
+    assert "maximum_shortage" in context
+    assert "Секретный поставщик" not in context
+
+
 def test_empty_question_is_rejected() -> None:
     with pytest.raises(ValueError, match="Вопрос не может быть пустым"):
         configured_service().ask("   ", financial_context(configured_service()))

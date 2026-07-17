@@ -6,12 +6,17 @@ import streamlit as st
 
 from services.analytics_service import calculate_metrics, compare_latest_months
 from services.anomaly_service import detect_anomalies
-from utils.formatting import format_month, format_percent, format_rubles
+from schemas.payment_calendar import PaymentCalendarResult
+from utils.formatting import format_date, format_month, format_percent, format_rubles
 from utils.style import ALFA_RED, INK, frame_period, render_page_heading, style_plotly_figure
 
 
-def render_page(frame: pd.DataFrame) -> None:
+def render_page(
+    frame: pd.DataFrame, calendar: PaymentCalendarResult | None = None
+) -> None:
     """Render headline metrics and financial alerts."""
+
+    calendar = calendar or st.session_state.get("payment_calendar_result")
 
     render_page_heading("Главная", len(frame), frame_period(frame))
     metrics = calculate_metrics(frame)
@@ -58,6 +63,12 @@ def render_page(frame: pd.DataFrame) -> None:
     st.plotly_chart(style_plotly_figure(figure), width="stretch", theme=None)
     st.subheader("Финансовые сигналы")
     alerts = detect_anomalies(frame)
+    if calendar is not None and calendar.first_gap_date:
+        alerts.append(
+            f"Платёжный календарь прогнозирует кассовый разрыв "
+            f"{format_date(calendar.first_gap_date)}: дефицит до "
+            f"{format_rubles(calendar.maximum_shortage)}."
+        )
     if alerts:
         for alert in alerts:
             st.warning(alert)

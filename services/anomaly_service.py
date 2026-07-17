@@ -34,6 +34,4 @@ def detect_anomalies(frame: pd.DataFrame) -> list[str]:
             new = current.loc[current["operation_type"] == operation_type, "amount"].sum()
             if old and new > old * 1.3:
                 warnings.append(f"{label} заметно выросли относительно прошлого месяца.")
-        if current_revenue < calculate_expenses(current) + current.loc[current["operation_type"] == "refund", "amount"].sum():
-            warnings.append("Есть риск кассового разрыва: расходы последнего месяца выше выручки.")
     return warnings

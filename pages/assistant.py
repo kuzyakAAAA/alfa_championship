@@ -20,6 +20,7 @@ from services.ai_service import AIServiceError, GigaChatAIService
 from services.analytics_service import calculate_metrics
 from services.anomaly_service import detect_anomalies
 from services.forecast_service import build_revenue_forecast
+from schemas.payment_calendar import PaymentCalendarResult, SCENARIO_LABELS
 from utils.style import frame_period, render_page_heading
 
 
@@ -62,7 +63,11 @@ FULL_EXAMPLES = [
 ]
 
 
-def _build_context(service: GigaChatAIService, frame: pd.DataFrame) -> str:
+def _build_context(
+    service: GigaChatAIService,
+    frame: pd.DataFrame,
+    calendar: PaymentCalendarResult,
+) -> str:
     """Create an anonymized aggregate context from existing calculation services."""
 
     metrics = asdict(calculate_metrics(frame))
@@ -87,10 +92,27 @@ def _build_context(service: GigaChatAIService, frame: pd.DataFrame) -> str:
             "message": forecast_result.message,
         }
     tariff_context = st.session_state.get("tariff_recommendation")
-    return service.build_financial_context(metrics, alerts, forecast, tariff_context)
+    cashflow = {
+        "horizon_days": calendar.horizon_days,
+        "scenario": SCENARIO_LABELS[calendar.scenario],
+        "expected_receipts": calendar.total_receipts,
+        "planned_payments": calendar.total_payments,
+        "ending_balance": calendar.ending_balance,
+        "minimum_balance": calendar.minimum_balance,
+        "first_gap_date": calendar.first_gap_date.isoformat() if calendar.first_gap_date else None,
+        "maximum_shortage": calendar.maximum_shortage,
+        "is_guaranteed": False,
+    }
+    return service.build_financial_context(
+        metrics, alerts, forecast, tariff_context, cashflow
+    )
 
 
-def render_page(frame: pd.DataFrame, tariff_frame: pd.DataFrame | None = None) -> None:
+def render_page(
+    frame: pd.DataFrame,
+    tariff_frame: pd.DataFrame | None = None,
+    calendar: PaymentCalendarResult | None = None,
+) -> None:
     """Render a GigaChat conversation with a safe mock-mode fallback."""
 
     render_page_heading("ИИ-помощник", len(frame), frame_period(frame))
@@ -106,7 +128,10 @@ def render_page(frame: pd.DataFrame, tariff_frame: pd.DataFrame | None = None) -
         ca_bundle_file=GIGACHAT_CA_BUNDLE_FILE,
     )
     del tariff_frame
-    st.session_state["financial_context"] = _build_context(service, frame)
+    calendar = calendar or st.session_state.get("payment_calendar_result")
+    if calendar is None:
+        raise ValueError("Платёжный календарь не инициализирован.")
+    st.session_state["financial_context"] = _build_context(service, frame, calendar)
     if service.is_configured():
         st.success("GigaChat API подключён")
     else:

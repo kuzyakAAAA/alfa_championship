@@ -1,10 +1,19 @@
 """Streamlit entry point for Alfa Business AI."""
 
+from datetime import date
+
 import pandas as pd
 import streamlit as st
 
 from config import APP_NAME, DATA_DIR
-from pages import analytics, assistant, dashboard, forecast, tariffs
+from database import SessionLocal, init_db
+from pages import analytics, assistant, courses, dashboard, forecast, payment_calendar, tariffs
+from repositories.payment_calendar_repository import (
+    get_or_create_profile,
+    list_cashflows,
+    profile_to_settings,
+)
+from services.payment_calendar_service import build_payment_calendar
 from services.transaction_service import clean_transactions
 from utils.file_loader import load_csv_file
 from utils.style import apply_global_styles
@@ -31,6 +40,12 @@ def load_tariffs() -> pd.DataFrame:
 def main() -> None:
     """Compose navigation, data source controls and the selected page."""
 
+    try:
+        init_db()
+    except Exception:
+        st.error("Не удалось инициализировать локальную базу данных.")
+        st.stop()
+
     st.sidebar.markdown(
         """
         <div class="ab-brand">
@@ -43,7 +58,15 @@ def main() -> None:
     st.sidebar.markdown('<div class="ab-sidebar-label">Разделы</div>', unsafe_allow_html=True)
     page = st.sidebar.radio(
         "Навигация",
-        ["Главная", "Аналитика", "Прогноз", "Тарифы", "ИИ-помощник"],
+        [
+            "Главная",
+            "Аналитика",
+            "Прогноз",
+            "Платёжный календарь",
+            "Курсы",
+            "Тарифы",
+            "ИИ-помощник",
+        ],
         label_visibility="collapsed",
     )
     st.sidebar.divider()
@@ -53,7 +76,8 @@ def main() -> None:
     if not demo_mode:
         uploaded = st.sidebar.file_uploader("Операции CSV", type=["csv"])
     try:
-        if demo_mode or uploaded is None:
+        using_demo = demo_mode or uploaded is None
+        if using_demo:
             frame = load_demo_data()
             st.sidebar.caption("Используются вымышленные демонстрационные данные.")
         else:
@@ -62,14 +86,25 @@ def main() -> None:
     except (ValueError, OSError, pd.errors.ParserError) as error:
         st.error(f"Не удалось обработать файл: {error}")
         st.stop()
-    renderers = {
-        "Главная": lambda: dashboard.render_page(frame),
-        "Аналитика": lambda: analytics.render_page(frame),
-        "Прогноз": lambda: forecast.render_page(frame),
-        "Тарифы": lambda: tariffs.render_page(frame, load_tariffs()),
-        "ИИ-помощник": lambda: assistant.render_page(frame, load_tariffs()),
-    }
-    renderers[page]()
+    profile_key = "demo" if using_demo else "uploaded"
+    with SessionLocal() as session:
+        profile = get_or_create_profile(session, profile_key, date.today())
+        settings = profile_to_settings(profile)
+        items = list_cashflows(session, profile.id)
+        calendar_result = build_payment_calendar(frame, settings, items, date.today())
+        st.session_state["payment_calendar_result"] = calendar_result
+        renderers = {
+            "Главная": lambda: dashboard.render_page(frame),
+            "Аналитика": lambda: analytics.render_page(frame),
+            "Прогноз": lambda: forecast.render_page(frame),
+            "Платёжный календарь": lambda: payment_calendar.render_page(
+                frame, session, profile, settings, items, calendar_result
+            ),
+            "Курсы": courses.render_page,
+            "Тарифы": lambda: tariffs.render_page(frame, load_tariffs()),
+            "ИИ-помощник": lambda: assistant.render_page(frame, load_tariffs()),
+        }
+        renderers[page]()
 
 
 if __name__ == "__main__":
